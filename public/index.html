@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="nn">
+<head>
+  <meta charset="UTF-8">
+  <title>Bryllupsplanleggjaren</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
+    h1 { text-align: center; color: #8B4513; }
+
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px; }
+
+    .kort { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; cursor: pointer; }
+    .kort:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .kort img { width: 100%; height: 180px; object-fit: cover; }
+    .kort-info { padding: 12px; }
+    .kort-info h3 { margin: 0 0 6px; }
+    .kort-info p { color: #666; font-size: 14px; margin: 0 0 8px; }
+    .pris { color: #8B4513; font-weight: bold; }
+
+    /* Popup */
+    .popup { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+    .popup.open { display: flex; }
+    .popup-boks { background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%; }
+    .popup-boks img { width: 100%; height: 200px; object-fit: cover; border-radius: 4px; }
+    .lukk { float: right; background: none; border: none; font-size: 20px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <h1>Bryllupsplanleggjaren</h1>
+  <p style="text-align:center;color:#666">Klikk på eit produkt for å sjå meir</p>
+
+  <div class="grid" id="grid">
+    <p>Lastar produkt...</p>
+  </div>
+
+  <!-- Popup for detaljvisning -->
+  <div class="popup" id="popup">
+    <div class="popup-boks">
+      <button class="lukk" onclick="document.getElementById('popup').classList.remove('open')">✕</button>
+      <div id="popup-innhald"></div>
+    </div>
+  </div>
+
+  <script>
+    // Hent produkt frå serveren og vis dei
+    fetch('/api/produkt')
+      .then(r => r.json())
+      .then(produkt => {
+        document.getElementById('grid').innerHTML = produkt.map(p => `
+          <div class="kort" onclick="visDetalj(${p.id})">
+            <img src="${p.bilde_url || ''}" alt="${p.namn}" onerror="this.style.display='none'">
+            <div class="kort-info">
+              <h3>${p.namn}</h3>
+              <p>${p.skildring.substring(0, 80)}...</p>
+              <div class="pris">kr ${p.pris.toLocaleString('nb-NO')},-</div>
+            </div>
+          </div>
+        `).join('');
+      });
+
+    // Vis detaljar i popup
+    function visDetalj(id) {
+      fetch(`/api/produkt/${id}`)
+        .then(r => r.json())
+        .then(p => {
+          document.getElementById('popup-innhald').innerHTML = `
+            <img src="${p.bilde_url || ''}" alt="${p.namn}" onerror="this.style.display='none'">
+            <h2>${p.namn}</h2>
+            <p style="color:#666">${p.skildring}</p>
+            <p class="pris" style="font-size:20px">kr ${p.pris.toLocaleString('nb-NO')},-</p>
+            <a href="mailto:hei@bryllup.no?subject=${p.namn}" style="display:block;margin-top:12px;padding:10px;background:#8B4513;color:white;text-align:center;border-radius:4px;text-decoration:none">Ta kontakt</a>
+          `;
+          document.getElementById('popup').classList.add('open');
+        });
+    }
+  </script>
+
+</body>
+</html>

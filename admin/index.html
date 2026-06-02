@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="nn">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
+    h1 { color: #8B4513; }
+
+    /* Skjema */
+    .skjema { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 30px; }
+    label { display: block; font-weight: bold; margin-top: 10px; }
+    input, textarea, select { width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    textarea { height: 80px; }
+    button { margin-top: 12px; padding: 10px 20px; background: #8B4513; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #6B3410; }
+
+    /* Tabell */
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+    th { background: #f0f0f0; }
+    .slett { background: #cc0000; padding: 5px 10px; font-size: 13px; margin-top: 0; }
+    .rediger { background: #2471a3; padding: 5px 10px; font-size: 13px; margin-top: 0; }
+  </style>
+</head>
+<body>
+
+  <h1>Admin – Bryllupsplanleggjaren</h1>
+
+  <!-- SKJEMA: Legg til / rediger produkt -->
+  <div class="skjema">
+    <h2 id="skjema-tittel">Legg til nytt produkt</h2>
+    <input type="hidden" id="f-id">
+
+    <label>Namn</label>
+    <input id="f-namn" type="text" placeholder="t.d. Strykekvartett">
+
+    <label>Pris (kr)</label>
+    <input id="f-pris" type="number" placeholder="0">
+
+    <label>Skildring</label>
+    <textarea id="f-skildring" placeholder="Beskriv produktet..."></textarea>
+
+    <label>Bilete-URL</label>
+    <input id="f-bilde" type="url" placeholder="https://...">
+
+    <label>Kategori</label>
+    <select id="f-kategori">
+      <option value="">– vel –</option>
+    </select>
+
+    <br>
+    <button onclick="lagre()">Lagre</button>
+    <button onclick="nullstill()" style="background:#666;margin-left:8px">Avbryt</button>
+    <p id="melding" style="margin-top:8px;color:green"></p>
+  </div>
+
+  <!-- TABELL: Alle produkt -->
+  <h2>Alle produkt</h2>
+  <table>
+    <thead>
+      <tr><th>Namn</th><th>Pris</th><th>Kategori</th><th>Handlingar</th></tr>
+    </thead>
+    <tbody id="tabell">
+      <tr><td colspan="4">Lastar...</td></tr>
+    </tbody>
+  </table>
+
+  <script>
+    // Last inn produkt og kategoriar ved oppstart
+    lastProdukt();
+    lastKategoriar();
+
+    async function lastProdukt() {
+      const produkt = await fetch('/api/admin/produkt').then(r => r.json());
+      document.getElementById('tabell').innerHTML = produkt.map(p => `
+        <tr>
+          <td>${p.namn}</td>
+          <td>kr ${p.pris.toLocaleString('nb-NO')},-</td>
+          <td>${p.kategori_namn || '–'}</td>
+          <td>
+            <button class="rediger" onclick="rediger(${p.id})">Rediger</button>
+            <button class="slett" onclick="slett(${p.id})">Slett</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function lastKategoriar() {
+      const kat = await fetch('/api/kategoriar').then(r => r.json());
+      const sel = document.getElementById('f-kategori');
+      sel.innerHTML = '<option value="">– vel –</option>';
+      kat.forEach(k => sel.innerHTML += `<option value="${k.id}">${k.namn}</option>`);
+    }
+
+    async function lagre() {
+      const id = document.getElementById('f-id').value;
+      const data = new FormData();
+      data.append('namn',        document.getElementById('f-namn').value);
+      data.append('pris',        document.getElementById('f-pris').value);
+      data.append('skildring',   document.getElementById('f-skildring').value);
+      data.append('bilde_url',   document.getElementById('f-bilde').value);
+      data.append('kategori_id', document.getElementById('f-kategori').value);
+      data.append('synleg', '1');
+
+      await fetch(id ? `/api/produkt/${id}` : '/api/produkt', {
+        method: id ? 'PUT' : 'POST', body: data
+      });
+
+      document.getElementById('melding').textContent = id ? '✓ Oppdatert!' : '✓ Lagt til!';
+      nullstill();
+      lastProdukt();
+    }
+
+    async function rediger(id) {
+      const p = await fetch(`/api/produkt/${id}`).then(r => r.json());
+      document.getElementById('f-id').value       = p.id;
+      document.getElementById('f-namn').value     = p.namn;
+      document.getElementById('f-pris').value     = p.pris;
+      document.getElementById('f-skildring').value = p.skildring;
+      document.getElementById('f-bilde').value    = p.bilde_url || '';
+      document.getElementById('f-kategori').value = p.kategori_id || '';
+      document.getElementById('skjema-tittel').textContent = 'Rediger produkt';
+    }
+
+    async function slett(id) {
+      if (!confirm('Er du sikker?')) return;
+      await fetch(`/api/produkt/${id}`, { method: 'DELETE' });
+      lastProdukt();
+    }
+
+    function nullstill() {
+      ['f-id','f-namn','f-pris','f-skildring','f-bilde'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('f-kategori').value = '';
+      document.getElementById('skjema-tittel').textContent = 'Legg til nytt produkt';
+    }
+  </script>
+
+</body>
+</html>
