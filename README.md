@@ -95,6 +95,8 @@ claude og lærar og sensor pgn samtalen
 
 kjelder:
 https://www.datatilsynet.no/regelverk-og-verktoy/lover-og-regler/om-personopplysningsloven-og-nar-den-gjelder/
+https://tangen-2it-utvikling.netlify.app/
+
 
 AI-bruk:
 Claude
